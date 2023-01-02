@@ -1,0 +1,258 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000                 AREA             |.text|, CODE, READONLY, ALIGN=
+2
+    2 00000000                 THUMB
+    3 00000000         
+    4 00000000         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    5 00000000         ; System Call Table
+    6 00000000 20007B00 
+                       SYSTEMCALLTBL
+                               EQU              0x20007B00
+    7 00000000 00000000 
+                       SYS_EXIT
+                               EQU              0x0         ; address 20007B00
+    8 00000000 00000001 
+                       SYS_MALLOC
+                               EQU              0x1         ; address 20007B04
+    9 00000000 00000002 
+                       SYS_FREE
+                               EQU              0x2         ; address 20007B08
+   10 00000000         
+   11 00000000         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   12 00000000         ; System Call Table Initialization
+   13 00000000                 EXPORT           _systemcall_table_init
+   14 00000000         _systemcall_table_init
+   15 00000000 4814            LDR              r0, = SYSTEMCALLTBL
+   16 00000002         
+   17 00000002         ; Initialize SYSTEMCALLTBL[0] = _sys_exit
+   18 00000002 4915            LDR              r1, = _sys_exit
+   19 00000004 6001            STR              r1, [r0]
+   20 00000006         
+   21 00000006         ; Initialize_SYSTEMCALLTBL[1] = _sys_malloc
+   22 00000006         ; add your code here so that _sys_malloc should be store
+                       d in the address 20007B04
+   23 00000006 4A15            LDR              r2, = _sys_malloc
+   24 00000008 F840 2F04       STR              r2, [r0, #4]!
+   25 0000000C         
+   26 0000000C         ; Initialize_SYSTEMCALLTBL[2] = _sys_free
+   27 0000000C         ; add your code here so that _sys_free should be stored 
+                       in the address 20007B08
+   28 0000000C 4B14            LDR              r3, =_sys_free
+   29 0000000E F840 3F04       STR              r3, [r0, #4]!
+   30 00000012         
+   31 00000012 4770            BX               lr
+   32 00000014         
+   33 00000014         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   34 00000014         ; System Call Table Jump Routine
+   35 00000014         ; this is the function that will be callsed by SVC
+   36 00000014                 EXPORT           _systemcall_table_jump
+   37 00000014         _systemcall_table_jump
+   38 00000014 F8DF B03C       LDR              r11, = SYSTEMCALLTBL ; load the
+                                                             starting address o
+                                                            f SYSTEMCALLTBL
+   39 00000018 46BA            MOV              r10, r7     ; copy the system c
+                                                            all number into r10
+                                                            
+   40 0000001A EA4F 0A8A       LSL              r10, #0x2   ; system call numbe
+                                                            r * 4, so that for 
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+                                                            malloc, it is 4, fo
+                                                            r free, it is 8
+   41 0000001E         ;;-------------------------------------------------
+   42 0000001E         ; complete the rest of the code. You need to branch to _
+                       sys_malloc or _sys_free
+   43 0000001E F1BA 0F04       CMP              R10, #4     ;if R10 is 4 then b
+                                                            ranch to sys_malloc
+                                                            
+   44 00000022 D008            BEQ              _sys_malloc
+   45 00000024         
+   46 00000024 F1BA 0F08       CMP              R10, #8     ; if R10 is 8 then 
+                                                            branch to _sys_free
+                                                            
+   47 00000028 D00C            BEQ              _sys_free
+   48 0000002A         ;--------------------------------------------------
+   49 0000002A 4770            BX               lr          ; return to SVC_Han
+                                                            dler
+   50 0000002C         
+   51 0000002C         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   52 0000002C         ; System Call 
+   53 0000002C         ; provided for you to use
+   54 0000002C         
+   55 0000002C         _sys_exit
+   56 0000002C B500            PUSH             {lr}        ; save lr
+   57 0000002E 47D8            BLX              r11
+   58 00000030 F85D EB04       POP              {lr}        ; resume lr
+   59 00000034 4770            BX               lr
+   60 00000036         
+   61 00000036         _sys_malloc
+   62 00000036                 IMPORT           _kalloc
+   63 00000036 F8DF B02C       LDR              r11, = _kalloc
+   64 0000003A B500            PUSH             {lr}        ; save lr
+   65 0000003C 47D8            BLX              r11         ; call the _kalloc 
+                                                            function 
+   66 0000003E F85D EB04       POP              {lr}        ; resume lr
+   67 00000042 4770            BX               lr
+   68 00000044         
+   69 00000044         _sys_free
+   70 00000044                 IMPORT           _kfree
+   71 00000044 F8DF B020       LDR              r11, = _kfree
+   72 00000048 B500            PUSH             {lr}        ; save lr
+   73 0000004A 47D8            BLX              r11         ; call the _kfree f
+                                                            unction 
+   74 0000004C F85D EB04       POP              {lr}        ; resume lr
+   75 00000050 4770            BX               lr
+   76 00000052         
+   77 00000052                 END
+              00 00 20007B00 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+              00000000 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\svc.d -o.\objects\svc.o -I.\RTE\_Target_1 -I"C:\Progr
+am Files\Keil\ARM\PACK\ARM\CMSIS\5.9.0\CMSIS\Core\Include" -I"C:\Program Files\
+Keil\ARM\PACK\Keil\TM4C_DFP\1.1.0\Device\Include\TM4C129" --predefine="__EVAL S
+ETA 1" --predefine="__UVISION_VERSION SETA 526" --predefine="_RTE_ SETA 1" --pr
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+edefine="TM4C129XNCZAD SETA 1" --list=.\listings\svc.lst svc.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+.text 00000000
+
+Symbol: .text
+   Definitions
+      At line 1 in file svc.s
+   Uses
+      None
+Comment: .text unused
+_sys_exit 0000002C
+
+Symbol: _sys_exit
+   Definitions
+      At line 55 in file svc.s
+   Uses
+      At line 18 in file svc.s
+Comment: _sys_exit used once
+_sys_free 00000044
+
+Symbol: _sys_free
+   Definitions
+      At line 69 in file svc.s
+   Uses
+      At line 28 in file svc.s
+      At line 47 in file svc.s
+
+_sys_malloc 00000036
+
+Symbol: _sys_malloc
+   Definitions
+      At line 61 in file svc.s
+   Uses
+      At line 23 in file svc.s
+      At line 44 in file svc.s
+
+_systemcall_table_init 00000000
+
+Symbol: _systemcall_table_init
+   Definitions
+      At line 14 in file svc.s
+   Uses
+      At line 13 in file svc.s
+Comment: _systemcall_table_init used once
+_systemcall_table_jump 00000014
+
+Symbol: _systemcall_table_jump
+   Definitions
+      At line 37 in file svc.s
+   Uses
+      At line 36 in file svc.s
+Comment: _systemcall_table_jump used once
+6 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+SYSTEMCALLTBL 20007B00
+
+Symbol: SYSTEMCALLTBL
+   Definitions
+      At line 6 in file svc.s
+   Uses
+      At line 15 in file svc.s
+      At line 38 in file svc.s
+
+SYS_EXIT 00000000
+
+Symbol: SYS_EXIT
+   Definitions
+      At line 7 in file svc.s
+   Uses
+      None
+Comment: SYS_EXIT unused
+SYS_FREE 00000002
+
+Symbol: SYS_FREE
+   Definitions
+      At line 9 in file svc.s
+   Uses
+      None
+Comment: SYS_FREE unused
+SYS_MALLOC 00000001
+
+Symbol: SYS_MALLOC
+   Definitions
+      At line 8 in file svc.s
+   Uses
+      None
+Comment: SYS_MALLOC unused
+4 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+External symbols
+
+_kalloc 00000000
+
+Symbol: _kalloc
+   Definitions
+      At line 62 in file svc.s
+   Uses
+      At line 63 in file svc.s
+Comment: _kalloc used once
+_kfree 00000000
+
+Symbol: _kfree
+   Definitions
+      At line 70 in file svc.s
+   Uses
+      At line 71 in file svc.s
+Comment: _kfree used once
+2 symbols
+349 symbols in table
